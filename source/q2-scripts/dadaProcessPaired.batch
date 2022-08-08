@@ -1,0 +1,123 @@
+#### this batch running import, demux & dada2 on paired-end reads
+
+#### citation
+
+#demux: Micah Hamday and Rob Knight. Microbial community profiling for human microbiome projects: tools, techniques, and challenges. Genome Research, 19:1141–1152, 2009. doi:10.1101/gr.085464.108.
+#dada2: Benjamin J Callahan, Paul J McMurdie, Michael J Rosen, Andrew W Han, Amy Jo A Johnson, and Susan P Holmes. Dada2: high-resolution sample inference from illumina amplicon data. Nature methods, 13(7):581, 2016. doi:10.1038/nmeth.3869.
+
+#### list file name, full path
+
+#find /RAID6_48T/hsf/qiime2/yzr_test_seq/ -name *1.fq.gz
+
+#######################################################################################
+#######################################################################################
+
+manifest="test_fq01_manifest"
+prefix_fq="test_fq01"
+prefix="test"
+
+CPU=50
+
+######## output files
+########
+
+echo "#============ This script is going to output these files ..."
+echo
+echo ${prefix_fq}_init.qza 
+echo ${prefix_fq}_sum.qzv
+echo
+echo ${prefix_fq}_tab.qza
+echo ${prefix_fq}_tab.qzv
+echo
+echo ${prefix_fq}_rep.qza
+echo ${prefix_fq}_rep.qzv
+echo
+echo ${prefix_fq}_stat.qza
+echo ${prefix_fq}_stat.qzv
+echo
+echo "#============ running batch ..."
+
+######## switch & firewall
+########
+#exit; exit
+
+######## import
+########
+
+#### import our own simple fq clean seq.gz after demultiplexing, and quality and primer filtering
+qiime tools import --type 'SampleData[PairedEndSequencesWithQuality]' --input-format PairedEndFastqManifestPhred33V2 \
+  --input-path  ${manifest}.tsv \
+  --output-path ${prefix_fq}_init.qza 
+
+echo
+echo ${prefix_fq}_init.qza
+echo "#============ finished qiime tools import ..." 
+echo
+
+######## demux : demultiplexing/filter/supsampling/summarize
+########
+
+#### if cleaning seq imported by using fq_manifest with quality filtering, adaptor/primer removing，then demulitplex is not needed.
+#### export summary of the clean reads per sample ID
+qiime demux summarize \
+	--i-data ${prefix_fq}_init.qza \
+	--o-visualization ${prefix_fq}_sum.qzv
+
+echo
+echo ${prefix_fq}_init.qza 
+echo ${prefix_fq}_sum.qzv
+echo "#============ finished qiime demux summarize ..."
+echo
+
+######## dada2
+########
+
+#### dada2 running
+qiime dada2 denoise-paired --p-n-threads ${CPU} --p-trunc-len-f 0 --p-trunc-len-r 0 --p-max-ee 2.0 \
+	--p-pooling-method pseudo \
+	--p-chimera-method consensus \
+	--p-min-fold-parent-over-abundance 1.0 \
+	--i-demultiplexed-seqs ${prefix_fq}_init.qza \
+	--o-table ${prefix_fq}_tab.qza \
+	--o-representative-sequences ${prefix_fq}_rep.qza \
+	--o-denoising-stats ${prefix_fq}_stat.qza
+
+echo
+echo ${prefix_fq}_tab.qza
+echo ${prefix_fq}_rep.qza
+echo ${prefix_fq}_stat.qza
+echo "#============ finished dada2 denoise-paired ..."
+echo
+
+######## feature table 
+########
+
+qiime feature-table summarize \
+  --m-sample-metadata-file ${manifest}.tsv \
+  --i-table ${prefix_fq}_tab.qza \
+  --o-visualization ${prefix_fq}_tab.qzv 
+  
+qiime feature-table tabulate-seqs \
+  --i-data ${prefix_fq}_rep.qza \
+  --o-visualization ${prefix_fq}_rep.qzv
+  
+qiime metadata tabulate \
+  --m-input-file ${prefix_fq}_stat.qza \
+  --o-visualization ${prefix_fq}_stat.qzv
+
+echo
+echo ${prefix_fq}_tab.qzv
+echo ${prefix_fq}_rep.qzv
+echo ${prefix_fq}_stat.qzv
+echo "#============ finished feature-table summarize/tabulate-seqs/tabulate ..."
+echo
+
+#######################################################################################
+#######################################################################################
+exit
+######## command examples
+########
+exit
+exit
+exit
+

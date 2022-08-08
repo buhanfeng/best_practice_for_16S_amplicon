@@ -1,0 +1,60 @@
+#!/bin/sh
+
+echo 'start alpha'
+
+fix1="merge_tabr.txt"
+fix2="merge_tabr.txt"
+path1=$2"/otutab/"
+path2=$2"/alpha/"
+
+in=$path1$fix1
+out=$path2$fix2
+
+if [ ! -d ${path2} ];then
+	mkdir ${path2}
+else
+	echo 'removing and creating '${path2}
+	rm -R ${path2}
+	mkdir ${path2}
+fi
+
+# create meta_X.txt
+li=$1
+fn="meta_"$li".txt"
+sy=$path1$fn
+if [ ! -f $sy ];then
+        echo $sy' is not exist, create.'
+        touch $sy
+        cat ../manifest.tsv | tail -n +2 | awk '{ print $1,$'$li'; }' | sed ':a;N;$!ba; s/ /\t/g' > $sy
+
+else
+        echo $sy' is exist, using old file for alpha analysis.'
+fi
+
+# adaptor for merge_tab.txt and merge_tabr.txt. under 32 bit version of usearch, we can not generate merge_tabr.txt file, under this
+# circustance, we use merge_tab.txt instead of merge_tabr.txt .
+otu_file=''
+if [ -f '../otutab/merge_tabr.txt' ];then
+	echo 'merge_tabr.txt are used for alpha diversity analysis'
+	otu_file='../otutab/merge_tabr.txt'
+else
+	echo 'merge_tab.txt are used for alpha diversity analysis'
+	otu_file='../otutab/merge_tab.txt'
+fi
+
+
+# alpha diversity
+usearch11.0.667_i86linux32 -alpha_div ${otu_file}  -output alpha.txt
+
+# significance
+usearch11.0.667_i86linux32 -alpha_div_sig ${otu_file} -meta $sy -tabbedout sig.txt
+
+# visualization
+if [ ! -f ../alpha/distmx.txt ];then
+	usearch11.0.667_i86linux32 -calc_distmx ../unoise/zotus.fa -tabbedout ../alpha/distmx.txt -maxdist 0.2 -termdist 0.3
+else
+        echo '../alpha/distmx.txt is exist, using old file for alpha analysis.'
+fi
+usearch11.0.667_i86linux32 -otutab_octave ${otu_file} -distmxin ../alpha/distmx.txt  -htmlout octave.html -svgout octave.svg
+
+

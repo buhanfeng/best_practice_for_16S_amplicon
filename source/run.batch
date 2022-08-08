@@ -1,0 +1,400 @@
+#!/bin/sh
+#
+# set enviroment variables
+# $1:basename, $2:working_path, $3:CPU
+#
+for line in `cat ./config.txt | grep -v '#'`
+do
+	# dealing empty line
+	if [ -z $line ];then
+		continue
+	fi
+	line=$line |tr -d '\r\n'
+	line=$line |tr -d '\n'
+	key=`echo $line | awk -F= '{ print $1;}'`
+	value=`echo $line | awk -F= '{ print $2;}'`
+	case ${key} in
+		process)
+		echo "process set to ${value}"
+		process=$value
+		;;
+		basename)
+		echo "basename set to ${value}"
+		basename=$value
+		;;
+		metadata)
+		echo "metadata set to ${value}"
+		metadata=$value
+		;;
+		usearch_path)
+		echo "usearch_path set to ${value}"
+		usearch_path=$value
+		;;
+		expect_error)
+		echo "expect_error set to ${value}"
+		expect_error=$value
+		;;
+		minsize)
+		echo "minsize set to ${value}"
+		minsize=$value
+		;;
+		CPU)
+		echo "CPU set to ${value}"
+		CPU=$value
+		;;
+		base_path)
+		echo "base_path set to ${value}"
+		base_path=$value
+		;;
+		tree_builder)
+		echo "tree_builder set to ${value}"
+		tree_builder=$value
+		;;
+		dim)
+		echo "dim set to ${value}"
+		dim=$value
+		;;
+		feature_filter)
+		echo "feature_filter set to ${value}"
+		feature_filter=$value
+		;;
+		sample_filter)
+		echo "sample_filter set to ${value}"
+		sample_filter=$value
+		;;
+		classifier)
+		echo "classifier set to ${value}"
+		classifier=$value
+		;;
+		manifest)
+		echo "manifest set to ${value}"
+		manifest=$value
+		;;
+		data_path)
+		echo "data_path set to ${value}"
+		data_path=$value
+		;;
+		command_path)
+		echo "command_path set to ${value}"
+		command_path=$value
+		;;
+		flt_base_on)
+		echo "flt_base_on set to ${value}"
+		flt_base_on=$value
+		;;
+		lefse_list)
+		lefse_list=$value
+		echo "lefse_list set to ${lefse_list}"
+		;;
+		LFI_parameter)
+		LFI_parameter=$value
+		echo "LFI_parameter set to ${LFI_parameter}"
+		;;
+		RF_parameter)
+		RF_parameter=$value
+		echo "RF_parameter set to ${RF_parameter}"
+		;;
+		subsample_prefix)
+		subsample_prefix=$value
+		echo "subsample_prefix set to ${subsample_prefix}"
+		;;
+		where_clause)
+		where_clause=$value
+		echo "where_clause set to ${where_clause}"
+		;;
+		*) echo "unknow parameter: ${key}"
+		;;
+	esac
+done
+
+#
+# def funtion
+#
+function run_merge(){
+	${command_path}/u-scripts/config.batch               $data_path $manifest $command_path
+	${command_path}/u-scripts/b_merge.batch              $data_path $manifest $command_path
+	${command_path}/u-scripts/b_merge_info.batch         $data_path $manifest $command_path
+}
+
+function run_unoise3(){
+	working_path="${base_path}/unoise3"
+	if [ ! -d ${working_path} ];then
+		echo ${working_path}' is not exist, make dir '${working_path}
+		mkdir ${working_path}
+	else
+		#echo 'removing and creating '${working_path}
+		#rm -R ${working_path}
+		#mkdir ${working_path}
+		echo ${working_path}' is exist, we will work under this given path...'
+	fi
+	if [ ! -d "${data_path}/merge" ];then
+		echo "${data_path}/merge is not exist, please check and try to running proccess 1 first. exit"
+		exit
+	fi
+	${command_path}/u-scripts/config.batch               $data_path $manifest $command_path
+	${command_path}/u-scripts/c_filter.batch             $basename $base_path $data_path $command_path $working_path $manifest $CPU $expect_error
+	${command_path}/u-scripts/c_filter_info.batch        $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/d_pooling.batch            $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/e_unique.batch             $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/f_unoise3.batch            $basename $base_path $data_path $command_path $working_path $manifest $CPU $minsize
+	${command_path}/u-scripts/g_relabel.batch            $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/g_otutab_zotus.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/g_otutab_merge.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/unoise3_to_qiime.batch     $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/classifier.batch          $basename $base_path $data_path $command_path $working_path $manifest $CPU $classifier
+	${command_path}/q2-scripts/taxaFilterMitoChlo.batch  $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/treeBuildFilter.batch     $basename $base_path $data_path $command_path $working_path $manifest $CPU $tree_builder
+	
+	# 过滤步骤放在建树之后，抽样之前
+	${command_path}/q2-scripts/featuresFilter.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU $feature_filter $sample_filter
+	
+	# 等待用户输入: sample_depth
+	read -p "Please input sample depth: " sample_depth
+	
+	${command_path}/q2-scripts/rarefy.batch              $basename $base_path $data_path $command_path $working_path $manifest $CPU $sample_depth
+	${command_path}/q2-scripts/alphaDiversity.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/betaDiversity.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU $dim
+	
+	# post step for feature and tax analysis using R.
+	${command_path}/oth-scripts/post_tab_tax.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU
+}
+
+function run_dada2(){
+	working_path="${base_path}/dada2"
+	if [ ! -d ${working_path} ];then
+		echo ${working_path}' is not exist, make dir '${working_path}
+		mkdir ${working_path}
+	else
+		#echo 'removing and creating '${working_path}
+		#rm -R ${working_path}
+		mkdir ${working_path}
+	fi
+	if [ ! -d "${data_path}/merge" ];then
+		echo "${data_path}/merge is not exist, please check and try to running proccess 1 first. exit"
+		exit
+	fi
+	${command_path}/q2-scripts/dadaProcessSingle.batch   $basename $base_path $data_path $command_path $working_path $manifest $CPU $classifier
+	${command_path}/q2-scripts/classifier.batch          $basename $base_path $data_path $command_path $working_path $manifest $CPU $classifier
+	${command_path}/q2-scripts/taxaFilterMitoChlo.batch  $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/treeBuildFilter.batch     $basename $base_path $data_path $command_path $working_path $manifest $CPU $tree_builder
+	
+	# 过滤步骤放在建树之后，抽样之前
+	${command_path}/q2-scripts/featuresFilter.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU $feature_filter $sample_filter
+	
+	# 等待用户输入: sample_depth
+	read -p "Please input sample depth: " sample_depth
+	
+	${command_path}/q2-scripts/rarefy.batch              $basename $base_path $data_path $command_path $working_path $manifest $CPU $sample_depth
+	${command_path}/q2-scripts/alphaDiversity.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/betaDiversity.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU $dim
+	
+	# post step for feature and tax analysis using R.
+	${command_path}/oth-scripts/post_tab_tax.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU
+}
+
+function run_uparse(){
+	working_path="${base_path}/uparse"
+	if [ ! -d ${working_path} ];then
+		echo ${working_path}' is not exist, make dir '${working_path}
+		mkdir ${working_path}
+	else
+		#echo 'removing and creating '${working_path}
+		#rm -R ${working_path}
+		mkdir ${working_path}
+	fi
+	if [ ! -d "${data_path}/merge" ];then
+		echo "${data_path}/merge is not exist, please check and try to running proccess 1 first. exit"
+		exit
+	fi
+	${command_path}/u-scripts/config.batch               $data_path $manifest $command_path
+	${command_path}/u-scripts/c_filter.batch             $basename $base_path $data_path $command_path $working_path $manifest $CPU $expect_error
+	${command_path}/u-scripts/c_filter_info.batch        $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/d_pooling.batch            $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/e_unique.batch             $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/f_uparse.batch             $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/g_relabel.batch            $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/g_otutab_otus.batch        $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/g_otutab_merge.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/u-scripts/uparse_to_qiime.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/classifier.batch          $basename $base_path $data_path $command_path $working_path $manifest $CPU $classifier
+	${command_path}/q2-scripts/taxaFilterMitoChlo.batch  $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/treeBuildFilter.batch     $basename $base_path $data_path $command_path $working_path $manifest $CPU $tree_builder
+	
+	# 过滤步骤放在建树之后，抽样之前
+	${command_path}/q2-scripts/featuresFilter.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU $feature_filter $sample_filter
+	
+	# 等待用户输入: sample_depth
+	read -p "Please input sample depth: " sample_depth
+	
+	${command_path}/q2-scripts/rarefy.batch              $basename $base_path $data_path $command_path $working_path $manifest $CPU $sample_depth
+	${command_path}/q2-scripts/alphaDiversity.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/betaDiversity.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU $dim
+	
+	# post step for feature and tax analysis using R.
+	${command_path}/oth-scripts/post_tab_tax.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU
+}
+
+function run_filter(){
+	working_path="${base_path}/flt_${flt_base_on}_${feature_filter}_${sample_filter}"
+	if [ ! -d ${working_path} ];then
+		echo ${working_path}' is not exist, make dir '${working_path}
+		mkdir ${working_path}
+	else
+		echo 'removing and creating '${working_path}
+		rm -R ${working_path}
+		mkdir ${working_path}
+	fi
+	base_on="${base_path}/${flt_base_on}"
+	if [ ! -d "${base_on}" ];then
+		echo "${base_on} is not exist, please run dada2/unoise3/uparse first. exit"
+		exit
+	fi
+	base_on="${base_path}/${flt_base_on}/${basename}_"
+	cp ${base_on}tab_pk.qza ${base_on}rep_pk.qza ${base_on}tab_pk_dtre2flt.qza ${base_on}tax.qza ${base_on}rep_pk_dtre.qza ${working_path}
+	
+	${command_path}/q2-scripts/featuresFilter.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU $feature_filter $sample_filter
+	${command_path}/q2-scripts/plot_tab_pk.batch         $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	
+	# 等待用户输入: sample_depth
+	read -p "Please input sample depth: " sample_depth
+	
+	${command_path}/q2-scripts/rarefy.batch              $basename $base_path $data_path $command_path $working_path $manifest $CPU $sample_depth
+	${command_path}/q2-scripts/alphaDiversity.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/betaDiversity.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU $dim
+	
+	# post step for feature and tax analysis using R.
+	${command_path}/oth-scripts/post_tab_tax.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU
+}
+
+function run_lefse(){
+	lefse_list=`echo $lefse_list | sed 's/@/ /g'`
+	for b in `echo $lefse_list`
+	do
+		working_path="$base_path/$b/lefse_analysis"
+		echo $working_path
+		${command_path}/le-scripts/lefse_format_input.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU $LFI_parameter
+		${command_path}/le-scripts/run_lefse.batch                $basename $base_path $data_path $command_path $working_path $manifest $CPU $LFI_parameter $RF_parameter
+		${command_path}/le-scripts/lefse_plot.batch               $basename $base_path $data_path $command_path $working_path $manifest $CPU $LFI_parameter $RF_parameter
+	done
+}
+
+function run_fea_sam_filter(){
+	working_path="${base_path}/flt_${flt_base_on}_${subsample_prefix}_${feature_filter}_${sample_filter}"
+	if [ ! -d ${working_path} ];then
+		echo ${working_path}' is not exist, make dir '${working_path}
+		mkdir ${working_path}
+	else
+		echo 'removing and creating '${working_path}
+		rm -R ${working_path}
+		mkdir ${working_path}
+	fi
+	base_on="${base_path}/${flt_base_on}"
+	if [ ! -d "${base_on}" ];then
+		echo "${base_on} is not exist, please run dada2/unoise3/uparse first. exit"
+		exit
+	fi
+	base_on="${base_path}/${flt_base_on}/${basename}_"
+	cp ${base_on}tab_pk.qza ${base_on}rep_pk.qza ${base_on}tab_pk_dtre2flt.qza ${base_on}tax.qza ${base_on}rep_pk_dtre.qza ${working_path}
+	
+	${command_path}/q2-scripts/featuresFilter.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU $feature_filter $sample_filter
+	${command_path}/q2-scripts/samplesFilter.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU $where_clause
+	${command_path}/q2-scripts/plot_tab_pk.batch         $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	
+	# 等待用户输入: sample_depth
+	read -p "Please input sample depth: " sample_depth
+	
+	${command_path}/q2-scripts/rarefy.batch              $basename $base_path $data_path $command_path $working_path $manifest $CPU $sample_depth
+	${command_path}/q2-scripts/alphaDiversity.batch      $basename $base_path $data_path $command_path $working_path $manifest $CPU
+	${command_path}/q2-scripts/betaDiversity.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU $dim
+	
+	# post step for feature and tax analysis using R.
+	${command_path}/oth-scripts/post_tab_tax.batch       $basename $base_path $data_path $command_path $working_path $manifest $CPU
+}
+
+function run_all(){
+	#working_path="${base_path}/uparse"
+	#if [ ! -d ${working_path} ];then
+	#	echo ${working_path}' is not exist, make dir '${working_path}
+	#	mkdir ${working_path}
+	#else
+	#	echo 'removing and creating '${working_path}
+	#	rm -R ${working_path}
+	#	mkdir ${working_path}
+	#fi
+	#if [ ! -d "${data_path}/merge" ];then
+	#	echo "${data_path}/merge is not exist, please check and try to running proccess 1 first. exit"
+	#	exit
+	#fi
+	run_unoise3
+	run_dada2
+	run_uparse
+}
+
+
+#
+# check environment
+#
+
+#
+# set environment
+#
+chmod 777 q2-scripts u-scripts oth-scripts R-scripts -R
+# conda activate qiime2-2021.8
+# set base_path
+if [ ! -d ${base_path} ];then
+	echo ${base_path}' is not exist, make dir '${base_path}
+	mkdir ${base_path}
+fi
+
+
+#
+# start running process
+#
+case $process in
+	1)
+	echo "running process 1..."
+	run_merge
+	;;
+	2)
+	echo "running process 2..."
+	run_unoise3
+	;;
+	3)
+	echo "running process 3..."
+	run_dada2
+	;;
+	4)
+	echo "running process 4..."
+	run_uparse
+	;;
+	5)
+	echo "running process 5..."
+	run_filter
+	;;
+	6)
+	echo "running process 6..."
+	run_all
+	;;
+	7)
+	echo "running process 7..."
+	run_lefse
+	;;
+	8)
+	echo "running process 8..."
+	run_fea_sam_filter
+	;;
+	*) echo "unsupport running model..."
+	;;
+esac
+
+
+
+
+
+
+
+
+
+
+
+

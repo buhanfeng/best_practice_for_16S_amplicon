@@ -1,0 +1,91 @@
+#基本文件命名规则
+
+#test是指最早的project base name
+#test_C97,test_C97nb,test_C97wb是指cluster 97OTU后的 project base name
+
+####imported
+test_manifest.tsv
+test_init.qza
+test_sum.qzv
+
+####after dada2
+test_tab.qza
+test_tab.qzv
+test_rep.qza
+test_rep.qzv
+test_stat.qza
+test_stat.qzv
+
+####EXTRA: after dada2 result-based vsearch clustering on 97%OTU & chimera filtering
+####后续同样进行taxonomy classfier&filter and tree build&filter
+test_C97_rep_unchime/*
+test_C97_tab.qza
+test_C97_tab.qzv
+test_C97_rep.qza
+test_C97_rep.qzv
+test_C97_reference.qza
+test_C97nb_tab.qza	(no borderline chimera)
+test_C97nb_tab.qzv
+test_C97nb_rep.qza
+test_C97nb_rep.qzv
+test_C97wb_tab.qza	(with borderline chimera)
+test_C97wb_tab.qzv
+test_C97wb_rep.qza
+test_C97wb_rep.qzv
+
+####after taxonomy classfier
+test_tab.qza
+test_tab.qzv
+test_rep.qza
+test_rep.qzv
+test_tax.qza
+test_tax.qzv
+test_tax_plots.qzv
+
+####after taxonomy-based filtering out Mitochondria & Chloroplast & non-prokaryotes 
+test_tab_pk.qza
+test_tab_pk.qzv
+test_rep_pk.qza
+test_rep_pk.qzv
+test_tax_pk.qza	(duplicated from test_tax.qza)
+test_tax_pk.qzv	(duplicated from test_tax.qzv)
+test_tax_pk_plots.qzv
+
+####after tree building and fitering
+test_tab_pk.qza
+test_tab_pk.qzv
+test_rep_pk.qza
+test_rep_pk.qzv
+test_tax_pk.qza	(duplicated from test_tax.qza)
+test_tax_pk.qzv	(duplicated from test_tax.qzv)
+test_tax_pk_plots.qzv
+test_rep_pk_ali.qza	(de novo tree)
+test_rep_pk_alim.qza
+test_rep_pk_dtre_unroot.qza
+test_rep_pk_dtre.qza
+test_tab_pk_dtre2flt.qza	(de novo tree based filtering)
+test_tab_pk_dtre2flt.qzv
+test_tax_pk_dtre2flt_plots.qzv
+test_rep_pk_itre.qza	(fragment insertion tree)
+test_rep_pk_itre_placem.qza
+test_tab_pk_itre2flt.qza	(fragment insertion tree based filering)
+test_tab_pk_itre2flt.qzv
+test_tab_pk_itre2rmv.qza
+test_tab_pk_itre2rmv.qzv
+test_tax_pk_itre2flt_plots.qzv
+
+######################################################
+此处为未定内容
+
+####after taxa collapse
+test_tab_pk_tlevel6.qza
+test_tab_pk_tlevel6.qzv
+
+
+
+
+
+
+
+
+

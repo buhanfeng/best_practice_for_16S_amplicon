@@ -1,0 +1,42 @@
+#!/bin/sh
+
+export PATH=$PATH:/RAID_32T/fbh/tools/cellranger-6.1.1/bin:/home/fbh/cellranger-4.0.0/bin-bk:/home/fbh/bin:/home/fbh/hmmer-3.3/bin/:/home/fbh/ncbi-blast-2.10.1+/bin/:/home/fbh/workflow/psi--1/db/nr.01:/home/fbh/sratoolkit.2.11.0-centos_linux64/bin:/home/fbh/samtools/bin:/home/fbh/hmmer-3.3/bin:/RAID_32T/fbh/workflow/chitin_binding_domain/PfamScan:/RAID_32T/fbh/workflow/chitin_binding_domain/perl/bin:/RAID_32T/fbh/tools/FastQC:/RAID_32T/fbh/tools
+
+echo "start running config.batch proccess ..."
+./config.batch
+
+#echo "start running a_clean.batch proccess ..."
+#a_clean.batch
+
+echo "start running b_merge.batch proccess ..."
+./b_merge.batch
+
+echo "start running b_merge_eestats.batch proccess ..."
+./b_merge_eestats.batch
+
+echo "start running b_merge_info.batch proccess ..."
+./b_merge_info.batch
+
+echo "start running c_filter.batch proccess ..."
+./c_filter.batch
+
+echo "start running c_filter_info.batch proccess ..."
+./c_filter_info.batch
+
+echo "start running c_filter_info.batch proccess ..."
+./d_pooling.batch
+
+echo "start running e_unique.batch proccess ..."
+./e_unique.batch
+
+echo "start running f_unoise3.batch proccess ..."
+./f_unoise3.batch
+
+echo "start running g_relabel.batch proccess ..."
+./g_relabel.batch
+
+echo "start running g_otutab.batch proccess ..."
+./g_otutab.batch
+
+echo "start running g_otutab_merge.batch proccess ..."
+./g_otutab_merge.batch

@@ -1,0 +1,67 @@
+#### this batch running import, demux & dada2 one single-end reads or already-merged reads
+
+#### citation
+
+#demux: Micah Hamday and Rob Knight. Microbial community profiling for human microbiome projects: tools, techniques, and challenges. Genome Research, 19:1141–1152, 2009. doi:10.1101/gr.085464.108.
+#dada2: Benjamin J Callahan, Paul J McMurdie, Michael J Rosen, Andrew W Han, Amy Jo A Johnson, and Susan P Holmes. Dada2: high-resolution sample inference from illumina amplicon data. Nature methods, 13(7):581, 2016. doi:10.1038/nmeth.3869.
+
+#### list file name, full path
+
+#find /RAID6_48T/hsf/qiime2/yzr_test_seq/ -name *1.fq.gz
+
+#######################################################################################
+#######################################################################################
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+tree_builder=$8
+
+prefix="${basename}_"
+
+cd $working_path
+
+
+######## import
+########
+
+#### import our own simple fq clean seq.gz after demultiplexing, and quality and primer filtering
+qiime tools import --type 'SampleData[SequencesWithQuality]' \
+  --input-format SingleEndFastqManifestPhred33V2 \
+  --input-path  ${manifest} \
+  --output-path ${prefix}init.qza 
+
+######## dada2
+########
+
+#### dada2 running
+qiime dada2 denoise-single --p-n-threads ${CPU} --p-trunc-len 0 --p-max-ee 3.6 \
+	--p-pooling-method pseudo \
+	--p-chimera-method consensus \
+	--p-min-fold-parent-over-abundance 1.0 \
+	--i-demultiplexed-seqs ${prefix}init.qza \
+	--o-table ${prefix}tab.qza \
+	--o-representative-sequences ${prefix}rep.qza \
+	--o-denoising-stats ${prefix}stat.qza
+
+######## feature table 
+########
+
+qiime feature-table summarize \
+  --m-sample-metadata-file ${manifest} \
+  --i-table ${prefix}tab.qza \
+  --o-visualization ${prefix}tab.qzv 
+  
+qiime feature-table tabulate-seqs \
+  --i-data ${prefix}rep.qza \
+  --o-visualization ${prefix}rep.qzv
+  
+qiime metadata tabulate \
+  --m-input-file ${prefix}stat.qza \
+  --o-visualization ${prefix}stat.qzv
+
+

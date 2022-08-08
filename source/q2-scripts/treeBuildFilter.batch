@@ -1,0 +1,213 @@
+####  taxonomy classification
+
+#### citation
+
+#Stefan Janssen, Daniel McDonald, Antonio Gonzalez, Jose A. Navas-Molina, Lingjing Jiang, Zhenjiang Zech Xu, Kevin Winker, Deborah M. Kado, Eric Orwoll, Mark Manary, Siavash Mirarab, and Rob Knight. Phylogenetic placement of exact amplicon sequences improves associations with clinical information. mSystems, 2018. doi:10.1128/mSystems.00021-18.
+
+#sepp reference data: https://data.qiime2.org/2021.4/common/sepp-refs-silva-128.qza
+
+#######################################################################################
+#######################################################################################
+
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+tree_builder=$8
+
+prefix=${basename}'_'
+
+taxonomy=${prefix}tax
+taxonomy_filtered=${prefix}tax_pk
+table=${prefix}tab
+table_filtered=${prefix}tab_pk
+sequence=${prefix}rep
+sequence_filtered=${prefix}rep_pk
+
+
+echo "#============ running batch ..."
+
+cd $working_path
+
+######## de-novo tree using raxml
+########
+function run_raxml(){
+	qiime phylogeny align-to-tree-mafft-raxml --p-n-threads ${CPU} \
+	  --i-sequences ${sequence_filtered}.qza \
+	  --o-alignment ${sequence_filtered}_ali.qza \
+	  --o-masked-alignment ${sequence_filtered}_alim.qza \
+	  --o-tree ${sequence_filtered}_dtre_unroot.qza \
+	  --o-rooted-tree ${sequence_filtered}_dtre.qza
+
+	echo
+	echo ${sequence_filtered}_ali.qza
+	echo ${sequence_filtered}_alim.qza
+	echo ${sequence_filtered}_dtre_unroot.qza
+	echo ${sequence_filtered}_dtre.qza
+	echo "#============ finished qiime de-novo tree ..."
+	echo
+}
+
+
+######## fragment-insertion tree
+########
+
+function run_SEPP(){
+	qiime fragment-insertion sepp --p-threads ${CPU} \
+	  --i-representative-sequences ${sequence_filtered}.qza \
+	  --i-reference-database /RAID6_48T/hsf/qiime2/taxa/sepp-refs-silva-128.qza \
+	  --o-tree ${sequence_filtered}_itre.qza \
+	  --o-placements ${sequence_filtered}_itre_placem.qza
+
+	echo
+	echo ${sequence_filtered}_itre.qza
+	echo ${sequence_filtered}_itre_placem.qza
+	echo "#============ finished qiime fragment-insertion tree ..."
+	echo
+}
+
+
+######## fasttree tree
+########
+
+function run_fasttree(){
+	qiime phylogeny align-to-tree-mafft-fasttree --p-n-threads ${CPU} \
+	 --i-sequences ${sequence_filtered}.qza \
+	 --o-alignment ${sequence_filtered}_ali.qza \
+	 --o-masked-alignment ${sequence_filtered}_alim.qza \
+	 --o-tree ${sequence_filtered}_dtre_unroot.qza \
+	 --o-rooted-tree ${sequence_filtered}_dtre.qza
+	 
+	echo
+	echo ${sequence_filtered}_dtre.qza
+	echo ${sequence_filtered}_dtre_placem.qza
+	echo "#============ finished qiime fragment-insertion tree ..."
+	echo
+}
+
+
+######## de-novo tree based filtering
+########
+
+function de_novo_flt(){
+	qiime phylogeny filter-table \
+	  --i-table ${table_filtered}.qza \
+	  --i-tree ${sequence_filtered}_dtre.qza \
+	  --o-filtered-table ${table_filtered}_dtre2flt.qza 
+
+	echo
+	echo ${table_filtered}_dtre2flt.qza
+	echo "#============ finished qiime de-novo tree based filtering ..."
+	echo
+}
+
+#### interactive visualization
+function de_novo_vis(){
+	qiime taxa barplot \
+		--i-table ${table_filtered}_dtre2flt.qza \
+		--i-taxonomy ${taxonomy}.qza \
+		--m-metadata-file ${manifest} \
+		--o-visualization ${taxonomy_filtered}_dtre2flt_plots.qzv
+		
+	echo
+	echo ${taxonomy_filtered}_dtre2flt_plots.qzv
+	echo "#============ finished qiime taxa barplot ..."
+	echo 
+	
+	qiime feature-table summarize \
+	 --m-sample-metadata-file ${manifest} \
+	 --i-table ${table_filtered}_dtre2flt.qza \
+	 --o-visualization ${table_filtered}_dtre2flt.qzv 	
+}
+
+#### summarize prokaryote only table
+#qiime feature-table summarize \
+#	--m-sample-metadata-file ${manifest} \
+#	--i-table ${table_filtered}_dtre2flt.qza \
+#	--o-visualization ${table_filtered}_dtre2flt.qzv 
+#  
+#echo
+#echo ${table_filtered}_dtre2flt.qzv
+#echo "#============ finished qiime feature-table summarize ..."
+#echo 
+
+######## fragment-insertion tree based filtering
+########
+function insertion_flt(){
+	qiime fragment-insertion filter-features \
+	  --i-table ${table_filtered}.qza \
+	  --i-tree ${sequence_filtered}_itre.qza \
+	  --o-filtered-table ${table_filtered}_itre2flt.qza \
+	  --o-removed-table ${table_filtered}_itre2rmv.qza
+
+	echo
+	echo ${table_filtered}_itre2flt.qza
+	echo ${table_filtered}_itre2rmv.qza
+	echo "#============ finished qiime fragment-insertion tree based table flitering ..."
+	echo
+}
+
+#### interactive visualization
+function insertion_vis(){
+	qiime taxa barplot \
+		--i-table ${table_filtered}_itre2flt.qza \
+		--i-taxonomy ${taxonomy}.qza \
+		--m-metadata-file ${manifest} \
+		--o-visualization ${taxonomy_filtered}_itre2flt_plots.qzv
+		
+
+	qiime feature-table summarize \
+	--m-sample-metadata-file ${manifest} \
+	--i-table ${table_filtered}_itre2flt.qza \
+	--o-visualization ${table_filtered}_itre2flt.qzv 
+
+}
+
+##### summarize prokaryote only table
+#qiime feature-table summarize \
+#	--m-sample-metadata-file ${manifest} \
+#	--i-table ${table_filtered}_itre2flt.qza \
+#	--o-visualization ${table_filtered}_itre2flt.qzv 
+#
+##### summarize prokaryote only table
+#qiime feature-table summarize \
+#	--m-sample-metadata-file ${manifest} \
+#	--i-table ${table_filtered}_itre2rmv.qza \
+#	--o-visualization ${table_filtered}_itre2rmv.qzv 	
+#  
+#echo
+#echo ${table_filtered}_itre2flt.qzv
+#echo ${table_filtered}_itre2rmv.qzv
+#echo "#============ finished qiime feature-table summarize ..."
+#echo 
+
+#
+# run batch
+#
+case ${tree_builder} in
+	fasttree)
+	echo "run fasttree..."
+	run_fasttree
+	de_novo_flt
+	de_novo_vis
+	;;
+	raxml)
+	echo "run raxml..."
+	run_raxml
+	de_novo_flt
+	de_novo_vis
+	;;
+	SEPP)
+	echo "run SEPP..."
+	run_SEPP
+	insertion_flt
+	insertion_vis
+	;;
+	*) echo "unknow tree_builder: ${tree_builder}"
+	;;
+esac
+

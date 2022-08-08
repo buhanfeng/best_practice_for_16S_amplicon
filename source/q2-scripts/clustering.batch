@@ -1,0 +1,196 @@
+#### this batch running vsearch for open-reference clustering && 2nd round chimera filtering
+
+#### citation
+
+#vsearch: Jai Ram Rideout, Yan He, Jose A. Navas-Molina, William A. Walters, Luke K. Ursell, Sean M. Gibbons, John Chase, Daniel McDonald, Antonio Gonzalez, Adam Robbins-Pianka, Jose C. Clemente, Jack A. Gilbert, Susan M. Huse, Hong-Wei Zhou, Rob Knight, and J. Gregory Caporaso. Subsampled open-reference clustering creates consistent, comprehensive otu definitions and scales to billions of sequences. PeerJ, 2:e545, 2014. doi:10.7717/peerj.545.
+
+
+#######################################################################################
+#######################################################################################
+
+manifest="test_fq01_manifest"
+prefix_fq="test_fq01"
+prefix=''
+
+CPU=50
+
+identity=97
+prefix_fq_C=${prefix_fq}C${identity}
+
+reference="/RAID6_48T/hsf/qiime2/taxa/silva-138-99-seqs-515-806.qza"
+
+
+manifest="manifest.tsv"
+prefix_fq=$1
+working_path=$2
+CPU=$3
+
+cd $working_path
+
+
+######## output files
+########
+
+echo "#============ This script is going to output these files ..."
+echo
+echo ${prefix_fq_C}_tab.qza
+echo ${prefix_fq_C}_tab.qzv
+echo ${prefix_fq_C}_rep.qza
+echo ${prefix_fq_C}_rep.qzv
+echo ${prefix_fq_C}_reference.qza
+echo ${prefix_fq_C}_rep_unchime/*
+echo
+echo ${prefix_fq_C}nb_tab.qza	\(no borderline chimera\)
+echo ${prefix_fq_C}nb_tab.qzv
+echo ${prefix_fq_C}nb_rep.qza
+echo ${prefix_fq_C}nb_rep.qzv
+echo
+echo ${prefix_fq_C}wb_tab.qza	\(with borderline chimera\)
+echo ${prefix_fq_C}wb_tab.qzv
+echo ${prefix_fq_C}wb_rep.qza
+echo ${prefix_fq_C}wb_rep.qzv
+echo
+echo "#============ running batch ..."
+
+######## switch & firewall
+########
+#exit; exit
+
+######## dereplicatiing
+########
+
+# not needed if data from q2-dada2
+
+
+######## open clustering
+########
+
+qiime vsearch cluster-features-open-reference --p-threads ${CPU} --p-perc-identity 0.${identity} --p-strand both \
+  --i-reference-sequences ${reference} \
+  --i-table ${prefix_fq}_tab.qza \
+  --i-sequences ${prefix_fq}_rep.qza \
+  --o-clustered-table ${prefix_fq_C}_tab.qza \
+  --o-clustered-sequences ${prefix_fq_C}_rep.qza \
+  --o-new-reference-sequences ${prefix_fq_C}_reference.qza
+
+echo
+echo ${prefix_fq_C}_tab.qza
+echo ${prefix_fq_C}_rep.qza
+echo ${prefix_fq_C}_reference.qza
+echo "#============ finished qiime cluster-features-open-reference ..."
+echo
+
+######## sumarizing after open clustering 
+########
+
+qiime feature-table summarize \
+  --m-sample-metadata-file ${manifest}.tsv \
+  --i-table ${prefix_fq_C}_tab.qza \
+  --o-visualization ${prefix_fq_C}_tab.qzv 
+  
+qiime feature-table tabulate-seqs \
+  --i-data ${prefix_fq_C}_rep.qza \
+  --o-visualization ${prefix_fq_C}_rep.qzv
+  
+echo
+echo ${prefix_fq_C}_tab.qzv
+echo ${prefix_fq_C}_rep.qzv
+echo "#============ finished feature-table summarize/tabulate-seqs ..."
+echo 
+
+######## chimera checking and filtering
+########
+
+rm -fr ${prefix_fq_C}_rep_unchime_old
+mv ${prefix_fq_C}_rep_unchime ${prefix_fq_C}_rep_unchime_old
+
+#### chimera checking and filtering (excluding borderline chimera)
+qiime vsearch uchime-denovo \
+  --i-table ${prefix_fq_C}_tab.qza \
+  --i-sequences ${prefix_fq_C}_rep.qza \
+  --output-dir ${prefix_fq_C}_rep_unchime
+  
+qiime feature-table filter-features \
+  --i-table ${prefix_fq_C}_tab.qza \
+  --m-metadata-file ${prefix_fq_C}_rep_unchime/nonchimeras.qza \
+  --o-filtered-table ${prefix_fq_C}nb_tab.qza
+  
+qiime feature-table filter-seqs \
+  --i-data ${prefix_fq_C}_rep.qza \
+  --m-metadata-file ${prefix_fq_C}_rep_unchime/nonchimeras.qza \
+  --o-filtered-data ${prefix_fq_C}nb_rep.qza 
+
+echo
+echo ${prefix_fq_C}nb_tab.qza
+echo ${prefix_fq_C}nb_rep.qza
+echo ${prefix_fq_C}_rep_unchime/*
+echo "#============ chimera checking and filtering (excluding borderline chimera) ..."
+echo
+
+#### sumarizing after chimera filtering
+qiime feature-table summarize \
+  --m-sample-metadata-file ${manifest}.tsv \
+  --i-table ${prefix_fq_C}nb_tab.qza \
+  --o-visualization ${prefix_fq_C}nb_tab.qzv 
+  
+qiime feature-table tabulate-seqs \
+  --i-data ${prefix_fq_C}nb_rep.qza \
+  --o-visualization ${prefix_fq_C}nb_rep.qzv
+  
+echo
+echo ${prefix_fq_C}nb_tab.qzv
+echo ${prefix_fq_C}nb_rep.qzv
+echo "#============ finished feature-table summarize/tabulate-seqs ..."
+echo  
+
+#### chimera checking and filtering (including borderline chimera)
+qiime feature-table filter-features \
+  --i-table ${prefix_fq_C}_tab.qza \
+  --p-exclude-ids \
+  --m-metadata-file ${prefix_fq_C}_rep_unchime/chimeras.qza \
+  --o-filtered-table ${prefix_fq_C}wb_tab.qza
+  
+qiime feature-table filter-seqs \
+  --i-data ${prefix_fq_C}_rep.qza \
+  --p-exclude-ids \
+  --m-metadata-file ${prefix_fq_C}_rep_unchime/chimeras.qza \
+  --o-filtered-data ${prefix_fq_C}wb_rep.qza 
+
+echo
+echo ${prefix_fq_C}wb_tab.qza
+echo ${prefix_fq_C}wb_rep.qza
+echo ${prefix_fq_C}_rep_unchime/*
+echo "#============ chimera checking and filtering (including borderline chimera) ..."
+echo
+
+#### sumarizing
+qiime feature-table summarize \
+  --m-sample-metadata-file ${manifest}.tsv \
+  --i-table ${prefix_fq_C}wb_tab.qza \
+  --o-visualization ${prefix_fq_C}wb_tab.qzv 
+  
+qiime feature-table tabulate-seqs \
+  --i-data ${prefix_fq_C}wb_rep.qza \
+  --o-visualization ${prefix_fq_C}wb_rep.qzv
+  
+echo
+echo ${prefix_fq_C}wb_tab.qzv
+echo ${prefix_fq_C}wb_rep.qzv
+echo "#============ finished feature-table summarize/tabulate-seqs ..."
+echo 
+
+
+#######################################################################################
+#######################################################################################
+exit
+######## command examples
+########
+exit
+exit
+exit
+
+############################################################################################
+
+
+
+############################################################################################

@@ -1,0 +1,106 @@
+####  beta diversity
+
+
+#######################################################################################
+#######################################################################################
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+dim=$8
+
+prefix=${basename}'_'
+
+taxonomy=${prefix}tax
+taxonomy_filtered=${prefix}tax_pk
+table=${prefix}tab
+table_filtered=${prefix}tab_pk
+table_rarefy=${table_filtered}_rf
+sequence=${prefix}rep
+sequence_filtered=${prefix}rep_pk
+
+echo
+echo "#============ running batch ..."
+
+cd $working_path
+
+if [ -d 'beta_diversity' ];then
+	echo 'beta_diversity is curenttly exist, removing and creating new one...'
+	rm beta_diversity -R
+fi
+
+mkdir beta_diversity
+cd beta_diversity
+
+######## generating distance matrix/pcoa matrix/pcoa visualization
+########
+
+select='jaccard,hamming,rogerstanimoto,minkowski,sokalsneath,yule,braycurtis,cityblock,euclidean,seuclidean,jensenshannon'
+num=1
+while [ ${num} -lt 12 ]
+do
+	metric=$(echo $select | awk -F, '{ print $'$num'; }')
+	let num+=1
+	
+	qiime diversity beta --i-table ../${table_rarefy}.qza --p-metric ${metric} --p-n-jobs ${CPU} --o-distance-matrix ${metric}_dm.qza
+	qiime tools export --input-path ${metric}_dm.qza --output-path ${metric}_dm
+	if [ ${dim} -eq 4 ];then
+		qiime diversity pcoa --i-distance-matrix ${metric}_dm.qza --p-number-of-dimensions 2 --o-pcoa ${metric}_2_pcoa.qza
+		qiime tools export --input-path ${metric}_2_pcoa.qza --output-path ${metric}_2_pcoa
+		qiime emperor plot --i-pcoa  ${metric}_2_pcoa.qza  --m-metadata-file ${manifest}  --o-visualization ${metric}_2_emperor
+		
+		qiime diversity pcoa --i-distance-matrix ${metric}_dm.qza --p-number-of-dimensions 3 --o-pcoa ${metric}_3_pcoa.qza
+		qiime tools export --input-path ${metric}_3_pcoa.qza --output-path ${metric}_3_pcoa
+		qiime emperor plot --i-pcoa  ${metric}_3_pcoa.qza  --m-metadata-file ${manifest}  --o-visualization ${metric}_3_emperor
+	else
+		qiime diversity pcoa --i-distance-matrix ${metric}_dm.qza --p-number-of-dimensions ${dim} --o-pcoa ${metric}_${dim}_pcoa.qza
+		qiime tools export --input-path ${metric}_${dim}_pcoa.qza --output-path ${metric}_${dim}_pcoa
+		qiime emperor plot --i-pcoa ${metric}_${dim}_pcoa.qza  --m-metadata-file ${manifest}  --o-visualization ${metric}_${dim}_emperor
+	fi
+done
+
+
+######## alpha diversity(phylogenetic)
+########
+select='generalized_unifrac,weighted_normalized_unifrac,unweighted_unifrac,weighted_unifrac'
+num=1
+while [ ${num} -lt 5 ]
+do
+	metric=$(echo $select | awk -F, '{ print $'$num'; }')
+	let num+=1
+	
+	qiime diversity beta-phylogenetic --i-table ../${table_filtered}_dtre2flt_rf.qza --i-phylogeny ../${sequence_filtered}_dtre.qza --p-metric ${metric}  --p-threads ${CPU} --o-distance-matrix ${metric}_dm.qza
+	if [ ${dim} -eq 4 ];then
+		qiime diversity pcoa --i-distance-matrix ${metric}_dm.qza --p-number-of-dimensions 2 --o-pcoa ${metric}_2_pcoa.qza
+		qiime tools export --input-path ${metric}_2_pcoa.qza --output-path ${metric}_2_pcoa
+		qiime emperor plot --i-pcoa ${metric}_2_pcoa.qza  --m-metadata-file ${manifest}  --o-visualization ${metric}_2_emperor
+		
+		qiime diversity pcoa --i-distance-matrix ${metric}_dm.qza --p-number-of-dimensions 3 --o-pcoa ${metric}_3_pcoa.qza
+		qiime tools export --input-path ${metric}_3_pcoa.qza --output-path ${metric}_3_pcoa
+		qiime emperor plot --i-pcoa ${metric}_3_pcoa.qza  --m-metadata-file ${manifest}  --o-visualization ${metric}_3_emperor
+	else
+		qiime diversity pcoa --i-distance-matrix ${metric}_dm.qza --p-number-of-dimensions ${dim} --o-pcoa ${metric}_${dim}_pcoa.qza
+		qiime tools export --input-path ${metric}_${dim}_pcoa.qza --output-path ${metric}_${dim}_pcoa
+		qiime emperor plot --i-pcoa ${metric}_${dim}_pcoa.qza  --m-metadata-file ${manifest}  --o-visualization ${metric}_${dim}_emperor
+	fi
+done
+
+cd ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+

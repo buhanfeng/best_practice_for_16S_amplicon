@@ -1,0 +1,55 @@
+####  alpha diversity
+
+
+#######################################################################################
+#######################################################################################
+
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+sample_depth=$8
+
+prefix=${basename}'_'
+
+taxonomy=${prefix}tax
+taxonomy_filtered=${prefix}tax_pk
+table=${prefix}tab
+table_filtered=${prefix}tab_pk
+sequence=${prefix}rep
+sequence_filtered=${prefix}rep_pk
+
+
+echo
+echo "#============ running batch ..."
+
+######## rarefy feature table. 
+########
+
+cd $working_path
+
+qiime feature-table rarefy \
+  --i-table ${table_filtered}.qza \
+  --p-sampling-depth ${sample_depth} \
+  --o-rarefied-table ${table_filtered}_rf.qza
+
+qiime feature-table rarefy \
+  --i-table ${table_filtered}_dtre2flt.qza \
+  --p-sampling-depth ${sample_depth} \
+  --o-rarefied-table ${table_filtered}_dtre2flt_rf.qza
+
+
+
+
+
+
+
+
+
+
+
+

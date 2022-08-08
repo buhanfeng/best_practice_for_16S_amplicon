@@ -1,0 +1,41 @@
+#!/bin/sh
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+LFI_parameter=$8
+RF_parameter=$9
+
+LFI_name=`echo $LFI_parameter | sed 's/@/_/g'`
+RF_name=`echo $RF_parameter | sed 's/@/_/g'`
+
+# lefse_plot_res.py visualizes the output
+#
+# Plot the list of biomarkers with their effect size
+# Severak graphical options are available for personalizing the output
+lefse-plot_res.py ${working_path}/lefse_${LFI_name}_${RF_name}.res ${working_path}/lefse_${LFI_name}_${RF_name}.png
+
+# lefse_plot_cladogram.py visualizes the output on a hierarchical tree
+#
+# Plot the representation of the biomarkers on the hierarchical tree
+# specified in the input data (using | in the name of the features)
+# In this case we will obtain the RDP taxonomy.
+# This is an early implementation of the module. I'm working on an improved version
+# that will be released independently from LEfSe
+lefse-plot_cladogram.py ${working_path}/lefse_${LFI_name}_${RF_name}.res ${working_path}/lefse_${LFI_name}_${RF_name}.cladogram.png --format png
+
+# Create a directory for storing the raw-data representation of the discovered biomarkers
+raw_png_path="${working_path}/biomarkers_raw_images"
+mkdir $raw_png_path
+
+# lefse_plot_features.py visualizes the raw-data features
+#
+# The module for exporting the raw-data representation of the features.
+# With the default options we will obtain the images for all the features that are
+# detected as biomarkers
+lefse-plot_features.py ${working_path}/lefse_${LFI_name}.in ${working_path}/lefse_${LFI_name}_${RF_name}.res $raw_png_path/
+

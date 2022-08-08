@@ -1,0 +1,37 @@
+
+
+echo 'build rep.qza using zotus.fa'
+echo 'build tab.qza using merge_tab.txt'
+
+echo '########### batch start...'
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+
+prefix=${basename}'_'
+
+
+cd $working_path
+
+
+biom convert -i $working_path"/otutab_uparse/merge_tab.txt" -o $working_path"/merge_tab_v100.biom" --table-type="OTU table" --to-json
+
+qiime tools import \
+  --input-path merge_tab_v100.biom \
+  --type 'FeatureTable[Frequency]' \
+  --input-format BIOMV100Format \
+  --output-path ${prefix}tab.qza
+  
+  
+qiime tools import \
+  --input-path ${working_path}"/uparse/otus.fa" \
+  --output-path ${prefix}rep.qza \
+  --type 'FeatureData[Sequence]'
+  
+  
+  

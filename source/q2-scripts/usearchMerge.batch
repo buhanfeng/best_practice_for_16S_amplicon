@@ -1,0 +1,28 @@
+#This batch was maded to merge paired-end sequences to single-end sequences.
+
+#Creat a output file and enter the directory where your sequences are.
+input_file=/RAID5_32T/oyjh/make_manifest/clean_data_cp
+output_file=/RAID5_32T/oyjh/make_manifest/merged
+
+mkdir $output_file
+cd $input_file
+
+rename _1.fq.gz .R1.fq.gz *_1.fq.gz
+rename _2.fq.gz .R2.fq.gz *_2.fq.gz
+
+#Uncompress the your seqs.gz files
+gunzip *
+
+for i in *R1.fq
+do      
+        usearch -fastq_mergepairs $i -fastqout $output_file/$i
+done
+
+cd $output_file
+#Change the name of output files.
+rename _R1.fq .MG.fq *R1*
+
+#Compress
+gzip *
+exit 0
+

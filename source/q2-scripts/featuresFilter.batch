@@ -1,0 +1,86 @@
+#!/bin/sh
+
+
+#######################################################################################
+#######################################################################################
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+feature_filter=$8
+sample_filter=$9
+
+prefix=${basename}'_'
+
+taxonomy=${prefix}tax
+taxonomy_filtered=${prefix}tax_pk
+table=${prefix}tab
+table_filtered=${prefix}tab_pk
+sequence=${prefix}rep
+sequence_filtered=${prefix}rep_pk
+
+
+echo
+echo "#============ running batch ..."
+
+cd $working_path
+
+######## filter tab_pk
+########
+
+qiime feature-table filter-features \
+ --i-table ${table_filtered}.qza \
+ --p-min-frequency ${feature_filter} \
+ --p-min-samples ${sample_filter} \
+ --o-filtered-table ${table_filtered}_temp.qza
+ 
+#rm ${table_filtered}.qza
+mv ${table_filtered}.qza ${table_filtered}_bk.qza
+mv ${table_filtered}.qzv ${table_filtered}_bk.qzv
+mv ${table_filtered}_temp.qza ${table_filtered}.qza
+
+#### regen ${table_filtered}.qzv
+qiime feature-table summarize \
+	--m-sample-metadata-file ${manifest} \
+	--i-table ${table_filtered}.qza \
+	--o-visualization ${table_filtered}.qzv 
+	
+
+qiime feature-table filter-seqs \
+  --i-data ${sequence_filtered}.qza \
+  --i-table ${table_filtered}.qza \
+  --o-filtered-data ${sequence_filtered}_temp.qza
+
+rm ${sequence_filtered}.qza
+mv ${sequence_filtered}_temp.qza ${sequence_filtered}.qza
+
+
+######## filter tab_pk_dtre2flt
+########
+
+qiime feature-table filter-features \
+ --i-table ${table_filtered}_dtre2flt.qza \
+ --p-min-frequency ${feature_filter} \
+ --p-min-samples ${sample_filter} \
+ --o-filtered-table ${table_filtered}_dtre2flt_temp.qza
+ 
+rm ${table_filtered}_dtre2flt.qza
+mv ${table_filtered}_dtre2flt_temp.qza ${table_filtered}_dtre2flt.qza
+
+
+
+
+
+
+
+
+
+
+
+
+
+

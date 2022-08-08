@@ -1,0 +1,24 @@
+#!/bin/sh
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+LFI_parameter=$8
+
+# Running the LEfSe commands with -h gives the list of available options
+
+# lefse-format_input.py convert the input data matrix to the format for LEfSe.
+#
+# In this example we use the class information in the first line (-c 1)
+# the subclass in the second line (-s 2) and the subject in the third (-u 3).
+# If the subclass or the subject are not present in the data you need to set
+# the value -1 for them.
+# -o 1000000 scales the feature such that the sum (of the same taxonomic leve)
+# is 1M: this is done only for obtaining more meaningful values for the LDA score
+LFI_name=`echo $LFI_parameter | sed 's/@/_/g'`
+LFI_parameter=`echo $LFI_parameter | sed 's/@/ /g'`
+echo $LFI_parameter
+lefse-format_input.py ${working_path}/lefse_tab.tsv ${working_path}/lefse_${LFI_name}.in $LFI_parameter

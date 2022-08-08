@@ -1,0 +1,35 @@
+#!/bin/sh
+
+echo 'start uparse'
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+
+fix1="unique.fa"
+fix2="otus.fa"
+fix3="uparse.txt"
+path1=$working_path"/unique/"
+path2=$working_path"/uparse/"
+
+in=$path1$fix1
+out1=$path2$fix2
+out2=$path2$fix3
+
+if [ ! -d ${path2} ];then
+        echo ${path2}' is not exist, make dir '${path2}
+        mkdir ${path2}
+        touch ${path2}'log.txt'
+else
+        echo 'removing and creating '${path2}
+        rm -R ${path2}
+        mkdir ${path2}
+        touch ${path2}'log.txt'
+fi
+
+nohup usearch11.0.667_i86linux32 -cluster_otus ${in} -otus ${out1} -uparseout ${out2} -relabel Otu >> ${path2}'log.txt'
+

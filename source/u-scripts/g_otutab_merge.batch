@@ -1,0 +1,65 @@
+#!/bin/sh
+
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+
+pa=`pwd`
+
+
+# merge otu table
+function merge_process(){
+	if [ -f './merge_tab.txt' ];then
+		echo 'merge_tab.txt are exist, removing and creating new one.'
+		rm merge_tab.txt
+	fi
+
+	echo `pwd`
+	in=`ls | grep tab.txt | sed ':a;N;$!ba; s/\n/,/g'`
+	echo 'merge otu: '${in}
+	usearch11.0.667_i86linux32 -otutab_merge ${in} -output merge_tab.txt
+}
+# merge otu table which base on unoise3
+if [ -d "${working_path}/otutab_unoise3/" ];then
+	cd ${working_path}/otutab_unoise3/
+	merge_process
+fi
+
+# merge otu table which base on uparse
+if [ -d "${working_path}/otutab_uparse/" ];then
+	cd ${working_path}/otutab_uparse/
+	merge_process
+fi
+
+
+cd $pa
+
+exit
+exit
+exit
+
+# dealing cross-talk
+# can not run successfully under 32-bit version
+#usearch11.0.667_i86linux32 -otutab_xtalk merge_tab.txt -report xtalk_report.txt -htmlout xtalk.html -otutabout merge_tabx.txt
+
+# rare
+# can not run successfully under 32-bit version
+#if [ -z "$1" ];then
+#	echo 'no parameter specified, rare proccess are therefore not called'
+#else
+#	echo 'calling rare proccess'
+#	if [ -f merge_tabx.txt ];then
+#		echo 'merge_tabx.txt is used to rarify'
+#		usearch11.0.667_i86linux32 -otutab_rare merge_tabx.txt -sample_size $1 -output merge_tabr.txt
+#	else
+#		echo 'merge_tabx is not exist, merge_tab is used to rarify'
+#		usearch11.0.667_i86linux32 -otutab_rare merge_tab.txt -sample_size $1 -output merge_tabr.txt
+#	fi
+#fi
+
+cd $pa

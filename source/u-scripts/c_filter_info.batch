@@ -1,0 +1,39 @@
+#!/bin/sh
+
+echo 'start filter info'
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+
+fix1=".fa"
+fix2=".txt"
+path1=$working_path"/filter/"
+path2=$working_path"/filter_info/"
+
+
+if [ ! -d ${path2} ];then
+        echo ${path2}' is not exist, make dir '${path2}
+        mkdir ${path2}
+        touch ${path2}'log.txt'
+else
+        echo 'removing and creating '${path2}
+        rm -R ${path2}
+        mkdir ${path2}
+        touch ${path2}'log.txt'
+fi
+
+
+for line in `cat ${command_path}/u-scripts/sample_names.txt`
+do
+	line=$line |tr -d '\r\n'
+	line=$line |tr -d '\n'
+	in=$path1$line$fix1
+	out=$path2$line$fix2
+	nohup usearch11.0.667_i86linux32 -fastx_info ${in}  -secs 5 -output ${out}  >> ${path2}'log.txt'
+done
+

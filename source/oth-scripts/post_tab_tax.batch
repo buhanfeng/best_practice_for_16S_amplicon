@@ -1,0 +1,66 @@
+#!/bin/sh
+#
+# this script generate merge_tab.txt and tax.tsv for feature_analysis and tax_analysis respectively.
+# this step is used by unoise3 or uparse proccess.
+#
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+
+prefix=${basename}'_'
+
+# echo "running post_tab_tax ..."
+
+path=${working_path}/post_tab_tax
+
+if [ ! -d $path ];then
+	echo ${path}' is not exist, make dir '${path}
+	mkdir ${path}
+else
+	echo 'removing and creating '${path}
+	rm -R ${path}
+	mkdir ${path}
+fi
+
+#
+# gen taxonomy.tsv
+#
+qiime tools export \
+ --input-path ${working_path}/${prefix}tax.qza \
+ --output-path ${working_path}/post_tab_tax
+# delete first row of taxonomy.tsv
+#sed -i '1d' ${working_path}/post_tab_tax/taxonomy.tsv
+
+# "Feature ID" change to "Feature_ID"
+vv=`head -n 1 ${path}/taxonomy.tsv | sed "s/Feature ID/Feature_ID/g"`
+sed -i "1c ${vv}" "${path}/taxonomy.tsv"
+
+
+
+
+
+# build merge_tab.txt base on pre merge_tab.txt file.
+if [ -d "${working_path}/otutab_unoise3" ];then
+	cp "${working_path}/otutab_unoise3/merge_tab.txt" "${path}/merge_tab.txt"
+elif [ -d "${working_path}/otutab_uparse" ];then
+	cp "${working_path}/otutab_uparse/merge_tab.txt" "${path}/merge_tab.txt"
+else
+	# echo "dada2 proccess is not suitable for generate merge_tab.txt file, consider using merge_tab_pk.txt file instead..."
+	qiime tools export \
+		--input-path ${working_path}/${prefix}tab_pk.qza \
+		--output-path ${working_path}/post_tab_tax
+
+		biom convert -i ${working_path}/post_tab_tax/feature-table.biom -o ${working_path}/post_tab_tax/merge_tab.txt --to-tsv
+		sed -i '1d' ${working_path}/post_tab_tax/merge_tab.txt
+fi
+
+# "#OTU ID" change to "OTU_ID"
+vv=`head -n 1 ${path}/merge_tab.txt | sed "s/#OTU ID/OTU_ID/g"`
+sed -i "1c ${vv}" "${path}/merge_tab.txt"
+
+echo "post_tab_tax successfully..."

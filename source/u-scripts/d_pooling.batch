@@ -1,0 +1,31 @@
+#!/bin/sh
+
+echo 'start pooling'
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+
+fix1="*.fa"
+fix2="pooling.fa"
+path1=$working_path"/filter/"
+path2=$working_path"/pooling/"
+
+in=$path1$fix1
+out=$path2$fix2
+
+if [ ! -d ${path2} ];then
+	mkdir ${path2}
+else
+	echo 'removing and creating '${path2}
+	rm -R ${path2}
+	mkdir ${path2}
+fi
+
+
+cat ${in} > ${out} 
+

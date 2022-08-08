@@ -1,0 +1,19 @@
+#!/bin/sh
+
+echo 'start merging'
+
+fix1="_1.fq"
+fix2="_2.fq"
+fix3="_merge.fq"
+fo=$line$fix1
+re=$line$fix2
+out=$line$fix3
+
+
+for line in `cat ./u-scripts/sample_names.txt`
+do
+	line=$line |tr -d '\r\n'
+	line=$line |tr -d '\n'
+	usearch11.0.667_i86linux32 -fastq_mergepairs ${fo} -reverse ${re} -fastqout ${out}
+done
+

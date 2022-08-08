@@ -1,0 +1,138 @@
+####  qiime taxa filter-table/collapse/filter-seqs/filter-table/qiime taxa barplot
+
+#### citation
+
+# based on silva reference sequences
+
+#######################################################################################
+#######################################################################################
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+
+prefix=${basename}'_'
+
+taxonomy=${prefix}tax
+taxonomy_filtered=${prefix}tax_pk
+table=${prefix}tab
+table_filtered=${prefix}tab_pk
+sequence=${prefix}rep
+sequence_filtered=${prefix}rep_pk
+
+cd $working_path
+
+
+
+######## output files
+########
+
+echo "#============ This script is going to output these files ..."
+echo
+echo ${prefix}tab_pk.qza
+echo ${prefix}tab_pk.qzv
+echo
+echo ${prefix}rep_pk.qza
+echo ${prefix}rep_pk.qzv
+echo
+echo ${prefix}tax_pk.qza	\(duplicated from ${prefix}tax.qza\)
+echo ${prefix}tax_pk.qza	\(duplicated from ${prefix}tax.qzv\)
+echo ${prefix}tax_pk_plots.qzv
+echo
+echo "#============ running batch ..."
+
+
+######## running
+########
+
+####
+#### remove features & rep-sequences that have not annotation & just mitochondria,chloroplast
+qiime taxa filter-table --verbose \
+	--p-include k__Bacteria,k__Archaea,d__Bacteria,d__Archaea \
+	--p-exclude mitochondria,chloroplast \
+	--i-taxonomy ${taxonomy}.qza \
+	--i-table ${table}.qza \
+	--o-filtered-table ${table_filtered}.qza
+	
+qiime taxa filter-seqs --verbose \
+	--p-include k__Bacteria,k__Archaea,d__Bacteria,d__Archaea \
+	--p-exclude mitochondria,chloroplast \
+	--i-taxonomy ${taxonomy}.qza \
+	--i-sequences ${sequence}.qza \
+	--o-filtered-sequences ${sequence_filtered}.qza
+	
+echo
+echo ${table_filtered}.qza
+echo ${sequence_filtered}.qza
+echo "#============ finished qiime taxa filter-seqs & filter-table ..."
+echo
+
+#### interactive visualization
+qiime taxa barplot \
+	--i-table ${table_filtered}.qza \
+	--i-taxonomy ${taxonomy}.qza \
+	--m-metadata-file ${manifest} \
+	--o-visualization ${taxonomy_filtered}_plots.qzv
+	
+echo
+echo ${taxonomy_filtered}_plots.qzv
+echo "#============ finished qiime taxa barplot ..."
+echo  
+
+#### summarize prokaryote only table & rep-seq
+qiime feature-table summarize \
+	--m-sample-metadata-file ${manifest} \
+	--i-table ${table_filtered}.qza \
+	--o-visualization ${table_filtered}.qzv 
+  
+qiime feature-table tabulate-seqs \
+	--i-data ${sequence_filtered}.qza \
+	--o-visualization ${sequence_filtered}.qzv
+
+echo
+echo ${table_filtered}.qzv 
+echo ${sequence_filtered}.qzv
+echo "#============ finished qiime feature-table summarize & tabulate-seqs ..."
+echo 
+
+#### taxonomy.gza are unaffected by this step, so just copy them
+cp -f ${taxonomy}.qza ${taxonomy_filtered}.qza
+cp -f ${taxonomy}.qzv ${taxonomy_filtered}.qzv
+
+echo ${taxonomy_filtered}.qza
+echo ${taxonomy_filtered}.qzv
+echo "#============ finished copying taxonomy data ..."
+echo 
+
+#######################################################################################
+#######################################################################################
+exit
+######## command examples
+########
+exit
+exit
+exit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,81 @@
+#!/bin/sh
+#### comprehensive microbiome scripts
+
+#1. 在执行 run.batch 之前，先在 config.txt 完成配置。
+#2. 如果需要用到usearch，要先将usearch 输出到全局变量，目前版本：usearch11.0.667_i86linux32。
+#3. 运行 run.batch 之前，确保已经激活 qiime2：conda activate qiime2-2021.8
+#4. 每次执行，如果设置的参数一样，上一次的结果会被覆盖
+
+
+# process=1时，将 data_path 参数指定路径下的 clean 文件夹中的数据用 usearch 进行双端合并，并在改路径下形成 merge 文件夹，里面存放merge好的序列
+# process=2时，由 unoise3 进行处理并完成下游分析，此时 data_path 路径底下应该有 merge 文件夹，里面放有merge好的序列，通常由process=1生成，batch跑完后base_path路径下生成unoise3 文件夹。
+# process=3时，由 dada2 进行处理并完成下游分析，此时 data_path 路径底下应该有 merge 文件夹，里面放有merge好的序列，通常由process=1生成，batch跑完后base_path路径下生成dada2 文件夹。
+# process=4时，由 uparse 进行处理并完成下游分析, 此时 data_path 路径底下应该有 merge 文件夹，里面放有merge好的序列，通常由process=1生成，batch跑完后base_path路径下生成uparse 文件夹。
+# process=5时，根据feature_filter 和 sample_filter 的值对 feature table 进行过滤然后进行alpha 和 beta分析。batch跑完后base_path路径下生成flt_XX_XX 文件夹,XX_XX分别对应feature_filter 和 sample_filter的值。
+# process=6时，一次性跑完process2-4。
+# process=7时，lefse
+# process=8时，feature_sample_filter
+process=2
+
+#项目名，可以不设置。设置后，所有生成的文件前面都会加上basename
+basename=batch7_all
+
+# 重要参数，一定要设置对。这个路径下面一般要有manifest.tsv文件。不需要 / 结尾。
+# 所有分析结果都在这个路径底下，一般会生成dada2/unoise3/uparse/flt_XX_XX 四个文件夹，解释如下：
+# dada2 文件夹下的文件是通过dada2 pipeline产生；
+# unoise3 文件夹下的文件是通过unoise3 pipeline产生；
+# uparse 文件夹下的文件是通过uparse pipeline产生；
+# flt_XX_XX 是通过改变feature_filter和sample_filter两个参数得到的分析结果
+base_path=/RAID_32T/fbh/microbiome/batch7_all
+
+# data_path
+data_path=/RAID_32T/fbh/microbiome/data
+
+#command_path
+command_path=/RAID_32T/fbh/microbiome/microbiome_batch
+
+# manifest的路径
+manifest=/RAID_32T/fbh/microbiome/batch7_all/manifest.tsv
+
+# qiime 使用的cpu数
+CPU=20
+
+#
+expect_error=3.6
+
+# process=3 时可以使用这个参数进行过滤，如果不使用这个参数，设置feature_filter 来过滤也可以。提供这个参数可以提高运行效率。
+minsize=8
+
+# 5/100000 or 10/100000 of abundance
+feature_filter=8
+
+# 10% of samples
+sample_filter=1
+
+#filter base on: dada2/unoise3/uparse
+flt_base_on=unoise3
+
+#
+classifier=/RAID_32T/fbh/microbiome/classifier-v3_v4.qza
+
+# choice：fasttree/raxml/SEPP
+tree_builder=fasttree
+
+# dimension of visualization for pcoa result of beta analysis，setting 4 for both 2 dimension and 3 demension pcoa results.
+dim=4
+
+# configuration of lefse
+# which path to run lefse
+lefse_list=unoise3@flt_unoise3_100_2@flt_unoise3_50_2@flt_unoise3_30_2@flt_unoise3_15_2
+LFI_parameter=-c@1@@-u@2@@-o@1000000
+# reference: https://github.com/biobakery/lefse/blob/master/run_lefse.py
+# -a:ANOVA significance; -w:wilcoxon_alpha significance; --min_c:minimum number of samples per subclass for performing wilcoxon test (default 10)
+RF_parameter=-a@0.05@-w@0.2@-s@1@--min_c@10
+
+# prefix for feature_sample_filter
+subsample_prefix=all_wildtype
+
+# sqlite where clause for feature_sample_filter
+where_clause=[sampleid]@IN@('BAT05_S3W15C','BAT05_S3W16C','BAT05_S3W17C','BAT05_S3W18C_1','BAT05_S3W18C_2','BAT05_S3W19C_1','BAT05_S3W19C_2','BAT05_W20','BAT05_W21','BAT05_W22','BAT05_W23','BAT05_W24','BAT05_W25','BAT05_W26C','BAT05_W27C','BAT05_W28C','BAT05_W29C_1','BAT05_W29C_2','BAT05_W30C_1','BAT05_W30C_2')
+
+

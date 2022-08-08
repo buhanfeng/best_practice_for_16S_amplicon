@@ -1,0 +1,14 @@
+#!/bin/sh
+
+data_path=$1
+manifest=$2
+command_path=$3
+
+if [ ! -f ${command_path}/u-scripts/sample_names.txt ];then
+        echo 'sample_names.txt is not exist, touch '"${command_path}/u-scripts/sample_names.txt"
+else
+        echo 'removing and creating '"${command_path}/u-scripts/sample_names.txt"
+        rm ${command_path}/u-scripts/sample_names.txt
+fi
+
+cat ${manifest} | awk '{print $1;}' | tail -n +2 > ${command_path}/u-scripts/sample_names.txt

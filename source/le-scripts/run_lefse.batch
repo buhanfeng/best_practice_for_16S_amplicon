@@ -1,0 +1,17 @@
+#!/bin/sh
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+LFI_parameter=$8
+RF_parameter=$9
+
+LFI_name=`echo $LFI_parameter | sed 's/@/_/g'`
+RF_name=`echo $RF_parameter | sed 's/@/_/g'`
+RF_parameter=`echo $RF_parameter | sed 's/@/ /g'`
+echo $RF_parameter
+run_lefse.py ${working_path}/lefse_${LFI_name}.in ${working_path}/lefse_${LFI_name}_${RF_name}.res $RF_parameter

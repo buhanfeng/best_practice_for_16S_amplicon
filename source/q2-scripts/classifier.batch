@@ -1,0 +1,64 @@
+####  taxonomy classification
+
+#### citation
+
+#分类器参数和参考文库：
+#Bokulich, N.A., Robeson, M., Dillon, M.R. bokulich-lab/RESCRIPt. Zenodo. http://doi.org/10.5281/zenodo.3891931
+#Nicholas A. Bokulich, Benjamin D. Kaehler, Jai Ram Rideout, Matthew Dillon, Evan Bolyen, Rob Knight, Gavin A. Huttley, and J. Gregory Caporaso. Optimizing taxonomic classification of marker-gene amplicon sequences with qiime 2's q2-feature-classifier plugin. Microbiome, 6(1):90, 2018. URL: https://doi.org/10.1186/s40168-018-0470-z, doi:10.1186/s40168-018-0470-z.	
+
+#silva naive bayes classifier: https://data.qiime2.org/2021.4/common/silva-138-99-515-806-nb-classifier.qza
+#silva seq:  https://data.qiime2.org/2021.4/common/silva-138-99-seqs-515-806.qza
+#silva taxa: https://data.qiime2.org/2021.4/common/silva-138-99-tax-515-806.qza
+
+#trained-by-us classifier: /RAID6_48T/hsf/qiime2/taxa/silva-138-99-classifier-515-806-nb-hsf.qza
+
+#######################################################################################
+#######################################################################################
+
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+classifier=$8
+
+prefix=${basename}_
+
+
+cd $working_path
+
+
+####
+#### naive bayes only classification
+qiime feature-classifier classify-sklearn --p-n-jobs ${CPU} --verbose \
+	--i-classifier ${classifier} \
+	--i-reads ${prefix}rep.qza \
+	--o-classification ${prefix}tax.qza
+
+echo
+echo ${prefix}tax.qza
+echo "#============ finished qiime feature-classifier classify-sklearn ..."
+echo
+
+qiime metadata tabulate \
+  --m-input-file ${prefix}tax.qza \
+  --o-visualization ${prefix}tax.qzv
+
+
+
+######## interactive visualization
+########
+
+####
+#### interactive visualization plotting
+qiime taxa barplot \
+  --i-table ${prefix}tab.qza \
+  --i-taxonomy ${prefix}tax.qza \
+  --m-metadata-file ${manifest} \
+  --o-visualization ${prefix}tax_plots.qzv
+  
+
+

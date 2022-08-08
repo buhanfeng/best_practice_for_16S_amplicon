@@ -1,0 +1,2 @@
+featuresFilter.batch has bug fixed.
+issue: tab_pk.qzv were regenerate after feature filter.

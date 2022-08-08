@@ -1,0 +1,100 @@
+####  alpha diversity
+
+
+#######################################################################################
+#######################################################################################
+
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+
+prefix=${basename}'_'
+
+taxonomy=${prefix}tax
+taxonomy_filtered=${prefix}tax_pk
+table=${prefix}tab
+table_filtered=${prefix}tab_pk
+table_rarefy=${table_filtered}_rf
+sequence=${prefix}rep
+sequence_filtered=${prefix}rep_pk
+
+
+echo
+echo "#============ running batch ..."
+
+cd $working_path
+
+if [ -d 'alpha_diversity' ];then
+	echo 'alpha_diversity is curenttly exist, removing and creating new one...'
+	rm alpha_diversity -R
+fi
+
+mkdir alpha_diversity
+cd alpha_diversity
+
+######## generating vector/significance visualization/vector table
+########
+
+select='chao1,ace,shannon,simpson,mcintosh_e,pielou_e,dominance,strong,mcintosh_d'
+num=1
+while [ ${num} -lt 10 ]
+do
+	metric=$(echo $select | awk -F, '{ print $'$num'; }')
+	let num+=1
+	
+	qiime diversity alpha --i-table ../${table_rarefy}.qza --p-metric ${metric} --o-alpha-diversity ${metric}_vector.qza
+	qiime diversity alpha-group-significance  --i-alpha-diversity ${metric}_vector.qza  --m-metadata-file ${manifest}  --o-visualization ${metric}_significance.qzv
+	# qiime metadata tabulate --m-input-file ${metric}_vector.qza --o-visualization ${metric}_tab.qzv
+done
+
+
+######## alpha diversity(phylogenetic)
+########
+qiime diversity alpha-phylogenetic \
+  --i-table ../${table_filtered}_dtre2flt_rf.qza \
+  --i-phylogeny ../${sequence_filtered}_dtre.qza \
+  --p-metric faith_pd \
+  --o-alpha-diversity faith_pd_vector.qza
+  
+qiime diversity alpha-group-significance  --i-alpha-diversity faith_pd_vector.qza  --m-metadata-file ${manifest}  --o-visualization faith_pd_significance.qzv
+#qiime metadata tabulate --m-input-file faith_pd_vector.qza --o-visualization faith_pd_tab.qzv
+
+
+######## generating alpha value table file containing all metric
+########
+vector_list=`ls | grep vector`
+command='qiime metadata tabulate '
+
+for line in $vector_list
+do
+	line=$line |tr -d '\r\n'
+	line=$line |tr -d '\n'
+	unit=" --m-input-file ${line} "
+	command=${command}${unit}
+done
+
+command=${command}' --o-visualization all_metrics_tab.qzv'
+echo $command
+$command
+
+
+cd ..
+
+
+
+
+
+
+
+
+
+
+
+
+
+

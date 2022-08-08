@@ -1,0 +1,38 @@
+#!/bin/sh
+
+echo 'start unoise3'
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+minsize=$8
+
+fix1="unique.fa"
+fix2="zotus.fa"
+fix3="unoise3.txt"
+path1=$working_path"/unique/"
+path2=$working_path"/unoise/"
+
+in=$path1$fix1
+out1=$path2$fix2
+out2=$path2$fix3
+
+if [ ! -d ${path2} ];then
+        echo ${path2}' is not exist, make dir '${path2}
+        mkdir ${path2}
+        touch ${path2}'log.txt'
+else
+        echo 'removing and creating '${path2}
+        rm -R ${path2}
+        mkdir ${path2}
+        touch ${path2}'log.txt'
+fi
+
+
+nohup usearch11.0.667_i86linux32 -unoise3 ${in} -zotus ${out1} -tabbedout ${out2} -minsize ${minsize} >> ${path2}'log.txt'
+
+

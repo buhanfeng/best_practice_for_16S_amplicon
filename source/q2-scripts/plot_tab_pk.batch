@@ -1,0 +1,69 @@
+#!/bin/sh
+
+#######################################################################################
+#######################################################################################
+
+basename=$1
+base_path=$2
+data_path=$3
+command_path=$4
+working_path=$5
+manifest=$6
+CPU=$7
+
+
+prefix=${basename}'_'
+
+taxonomy=${prefix}tax
+taxonomy_filtered=${prefix}tax_pk
+table=${prefix}tab
+table_filtered=${prefix}tab_pk
+sequence=${prefix}rep
+sequence_filtered=${prefix}rep_pk
+
+echo
+echo "#============ running batch ..."
+
+cd $working_path
+
+#### interactive visualization for tab_pk
+qiime taxa barplot \
+	--i-table ${table_filtered}.qza \
+	--i-taxonomy ${taxonomy}.qza \
+	--m-metadata-file ${manifest} \
+	--o-visualization ${taxonomy_filtered}_plots.qzv
+
+qiime feature-table summarize \
+	--m-sample-metadata-file ${manifest} \
+	--i-table ${table_filtered}.qza \
+	--o-visualization ${table_filtered}.qzv 
+  
+qiime feature-table tabulate-seqs \
+	--i-data ${sequence_filtered}.qza \
+	--o-visualization ${sequence_filtered}.qzv
+
+
+#### interactive visualization for tab_pk_dtre2flt
+qiime taxa barplot \
+	--i-table ${table_filtered}_dtre2flt.qza \
+	--i-taxonomy ${taxonomy}.qza \
+	--m-metadata-file ${manifest} \
+	--o-visualization ${taxonomy_filtered}_dtre2flt_plots.qzv 
+
+qiime feature-table summarize \
+	--m-sample-metadata-file ${manifest} \
+	--i-table ${table_filtered}_dtre2flt.qza \
+	--o-visualization ${table_filtered}_dtre2flt.qzv 
+
+
+
+
+
+
+
+
+
+
+
+
+
