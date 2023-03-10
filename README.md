@@ -1,1 +1,1 @@
-# best_practice_for_16S_RNAseq
+# best_practice_for_16S_amplicon
